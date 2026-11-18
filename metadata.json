@@ -1,0 +1,6 @@
+{
+  "name": "منصة اختبار الرموز الكهربائية",
+  "description": "منصة تفاعلية باللغة العربية (RTL) لاختبار والتدريب على قراءة 90 رمزاً كهربائياً من المنهج الدراسي.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
