@@ -2,10 +2,10 @@ import type { ElectricalSymbol } from '../data/symbols';
 
 export type QuizMode = 'full' | 'quick20' | 'practice';
 
-export type AnswerStatus = 'correct' | 'close' | 'wrong' | 'skipped';
+export type AnswerStatus = 'correct' | 'close' | 'wrong' | 'skipped' | 'revealed';
 
 export interface EvaluationResult {
-  status: 'correct' | 'close' | 'wrong';
+  status: 'correct' | 'close' | 'wrong' | 'revealed';
   similarity: number;
   message: string;
 }
@@ -84,22 +84,37 @@ export function normalize(text: string): string {
 /**
  * توحيد المرادفات الشائعة بعد التطبيع (فاز=طور، ضاغط=زر ضغط=ضغاط، إلخ).
  */
+// حدود الكلمة: \b في JavaScript لا تعمل مع الحروف العربية، لذلك نستخدم حدوداً مبنية على الحروف العربية/اللاتينية/الأرقام.
+const WORD_START = '(?<![\\u0600-\\u06FFa-zA-Z0-9])';
+const WORD_END = '(?![\\u0600-\\u06FFa-zA-Z0-9])';
+
+function wordRule(words: string, replacement: string): [RegExp, string] {
+  return [new RegExp(`${WORD_START}(?:${words})${WORD_END}`, 'g'), replacement];
+}
+
+const SYNONYM_RULES: ReadonlyArray<[RegExp, string]> = [
+  wordRule('زر ضغط|ضغاط', 'ضاغط'),
+  wordRule('طور|اطوار', 'فاز'),
+  wordRule('ابريز|ماخذ|بريزه|بريز', 'ايريز'),
+  wordRule('بريكر', 'قاطع'),
+  wordRule('صهر|مصهر', 'فيوز'),
+  wordRule('ثيمر|تيمر|موقت', 'تايمر'),
+  wordRule('مخفت', 'ديمر'),
+  wordRule('ثلاجه', 'براد'),
+  wordRule('فلورسنت', 'نيون'),
+  wordRule('نيوترال', 'نتر'),
+];
+
+/**
+ * توحيد المرادفات الشائعة بعد التطبيع (فاز=طور، ضاغط=زر ضغط=ضغاط، إلخ).
+ */
 export function canonicalizeSynonyms(normalized: string): string {
   if (!normalized) return '';
-  return normalized
-    .replace(/\bزر ضغط\b/g, 'ضاغط')
-    .replace(/\bضغاط\b/g, 'ضاغط')
-    .replace(/\b(طور|اطوار)\b/g, 'فاز')
-    .replace(/\b(ابريز|ماخذ|بريزه|بريز)\b/g, 'ايريز')
-    .replace(/\bبريكر\b/g, 'قاطع')
-    .replace(/\b(صهر|مصهر)\b/g, 'فيوز')
-    .replace(/\b(ثيمر|تيمر|موقت)\b/g, 'تايمر')
-    .replace(/\bمخفت\b/g, 'ديمر')
-    .replace(/\bثلاجه\b/g, 'براد')
-    .replace(/\bفلورسنت\b/g, 'نيون')
-    .replace(/\bنيوترال\b/g, 'نتر')
-    .replace(/\s+/g, ' ')
-    .trim();
+  let out = normalized;
+  for (const [pattern, replacement] of SYNONYM_RULES) {
+    out = out.replace(pattern, replacement);
+  }
+  return out.replace(/\s+/g, ' ').trim();
 }
 
 /**
