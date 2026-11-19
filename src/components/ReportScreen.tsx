@@ -9,6 +9,7 @@ import {
   XCircle,
   AlertTriangle,
   SkipForward,
+  Eye,
 } from 'lucide-react';
 import { formatDuration, getVerbalGrade, type AnswerRecord } from '../utils/quizLogic';
 import { buildHtmlReport, buildTxtReport, downloadTextFile } from '../utils/reportGenerator';
@@ -267,6 +268,12 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
                       <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: 'var(--text-muted)' }}>
                         <SkipForward className="w-4 h-4" />
                         <span>تم التخطي</span>
+                      </span>
+                    )}
+                    {rec.status === 'revealed' && (
+                      <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: 'var(--warn-text)' }}>
+                        <Eye className="w-4 h-4" />
+                        <span>تم كشف الإجابة</span>
                       </span>
                     )}
                     {rec.status === 'wrong' && (
