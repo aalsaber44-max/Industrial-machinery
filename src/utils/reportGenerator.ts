@@ -17,6 +17,8 @@ function getStatusLabel(status: AnswerRecord['status']): string {
       return 'قريب من الصحيح';
     case 'skipped':
       return 'تم التخطي';
+    case 'revealed':
+      return 'تم كشف الإجابة';
     default:
       return 'خطأ';
   }
@@ -46,7 +48,7 @@ export function buildHtmlReport(records: readonly AnswerRecord[], totalTimeSec: 
           ? 'st-ok'
           : rec.status === 'close'
             ? 'st-warn'
-            : rec.status === 'skipped'
+            : rec.status === 'skipped' || rec.status === 'revealed'
               ? 'st-skip'
               : 'st-err';
 
