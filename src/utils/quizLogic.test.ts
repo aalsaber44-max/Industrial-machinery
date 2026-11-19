@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SYMBOLS } from '../data/symbols';
 import {
+  canonicalizeSynonyms,
   evaluateAnswer,
   formatDuration,
   getHint,
@@ -89,4 +90,44 @@ test('helpers: getHint, getVerbalGrade, and formatDuration behave deterministica
   assert.equal(getVerbalGrade(61), 'مقبول');
   assert.equal(getVerbalGrade(40), 'يحتاج إلى مراجعة');
   assert.equal(formatDuration(125), '02:05');
+});
+
+test('canonicalizeSynonyms works with Arabic words (whole-word matching, no \\b)', () => {
+  assert.equal(canonicalizeSynonyms('زر ضغط'), 'ضاغط');
+  assert.equal(canonicalizeSynonyms('ضغاط'), 'ضاغط');
+  assert.equal(canonicalizeSynonyms('محرك ثلاثه اطوار'), 'محرك ثلاثه فاز');
+  assert.equal(canonicalizeSynonyms('ابريز عادي'), 'ايريز عادي');
+  assert.equal(canonicalizeSynonyms('ماخذ عادي'), 'ايريز عادي');
+  assert.equal(canonicalizeSynonyms('مصهر'), 'فيوز');
+  assert.equal(canonicalizeSynonyms('بريكر'), 'قاطع');
+  assert.equal(canonicalizeSynonyms('موقت'), 'تايمر');
+  // لا يستبدل جزءاً من كلمة أخرى
+  assert.equal(canonicalizeSynonyms('طورين'), 'طورين');
+});
+
+test('every symbol name and alias is accepted for its own symbol', () => {
+  for (const sym of SYMBOLS) {
+    for (const answer of [sym.name, ...sym.aliases]) {
+      assert.equal(
+        evaluateAnswer(answer, sym, SYMBOLS).status,
+        'correct',
+        `Symbol ${sym.id}: "${answer}" should be accepted`
+      );
+    }
+  }
+});
+
+test('exact name of a different symbol is never accepted (similar names guard)', () => {
+  const clashes: string[] = [];
+  for (const sym of SYMBOLS) {
+    for (const other of SYMBOLS) {
+      if (other.id === sym.id || normalize(other.name) === normalize(sym.name)) continue;
+      const aliasSet = new Set([sym.name, ...sym.aliases].map((a) => normalize(a)));
+      if (aliasSet.has(normalize(other.name))) continue; // اسم مشترك مقصود
+      if (evaluateAnswer(other.name, sym, SYMBOLS).status === 'correct') {
+        clashes.push(`${other.id} -> ${sym.id}`);
+      }
+    }
+  }
+  assert.deepEqual(clashes, []);
 });
