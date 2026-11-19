@@ -318,25 +318,25 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
                   backgroundColor:
                     checkedResult.status === 'correct'
                       ? 'var(--ok-bg)'
-                      : checkedResult.status === 'close'
+                      : checkedResult.status === 'close' || checkedResult.status === 'revealed'
                         ? 'var(--warn-bg)'
                         : 'var(--err-bg)',
                   borderColor:
                     checkedResult.status === 'correct'
                       ? 'var(--ok-border)'
-                      : checkedResult.status === 'close'
+                      : checkedResult.status === 'close' || checkedResult.status === 'revealed'
                         ? 'var(--warn-border)'
                         : 'var(--err-border)',
                   color:
                     checkedResult.status === 'correct'
                       ? 'var(--ok-text)'
-                      : checkedResult.status === 'close'
+                      : checkedResult.status === 'close' || checkedResult.status === 'revealed'
                         ? 'var(--warn-text)'
                         : 'var(--err-text)',
                 }}
               >
                 {checkedResult.status === 'correct' && <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />}
-                {checkedResult.status === 'close' && <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />}
+                {(checkedResult.status === 'close' || checkedResult.status === 'revealed') && <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />}
                 {checkedResult.status === 'wrong' && <XCircle className="w-5 h-5 shrink-0 mt-0.5" />}
                 <span>{checkedResult.message}</span>
               </div>
