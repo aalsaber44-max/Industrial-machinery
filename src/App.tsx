@@ -76,14 +76,22 @@ export default function App() {
 
   const handleCheck = useCallback(() => {
     if (checkedResult) return;
-    const res = evaluateAnswer(answerText, currentSymbol, SYMBOLS);
+
+    // إذا كُشفت الإجابة في وضع التدريب فلا تُحتسب نقطة حتى لو كتبها الطالب
+    const res: EvaluationResult = answerRevealed
+      ? {
+          status: 'revealed',
+          similarity: 0,
+          message: `تم كشف الإجابة لهذا السؤال، لذلك لا تُحتسب له نقطة. الإجابة: ${currentSymbol.name}`,
+        }
+      : evaluateAnswer(answerText, currentSymbol, SYMBOLS);
     setCheckedResult(res);
 
     if (res.status === 'correct') {
       setScore((prev) => prev + 1);
       setStreak((prev) => prev + 1);
       playFeedbackSound('correct', muted);
-    } else if (res.status === 'close') {
+    } else if (res.status === 'close' || res.status === 'revealed') {
       setStreak(0);
       playFeedbackSound('close', muted);
     } else {
@@ -100,7 +108,7 @@ export default function App() {
         timeSpentSec: questionElapsedSec,
       },
     ]);
-  }, [answerText, checkedResult, currentSymbol, muted, questionElapsedSec]);
+  }, [answerRevealed, answerText, checkedResult, currentSymbol, muted, questionElapsedSec]);
 
   const advanceOrFinish = useCallback(() => {
     if (currentIndex + 1 >= deck.length) {
