@@ -3,7 +3,7 @@ import type { Question } from './questionTypes';
 
 export type QuizMode = 'full' | 'quick20' | 'practice' | 'custom';
 
-export type AnswerStatus = 'correct' | 'close' | 'wrong' | 'skipped' | 'revealed';
+export type AnswerStatus = 'correct' | 'close' | 'wrong' | 'skipped' | 'revealed' | 'unanswered';
 
 export interface ScoreSummary {
   total: number;
@@ -12,6 +12,8 @@ export interface ScoreSummary {
   wrong: number;
   skipped: number;
   revealed: number;
+  /** أسئلة لم يتحقق منها الطالب ولم يتخطها */
+  unanswered: number;
   /** عدد الأسئلة التي لم تُجب إجابة صحيحة (للمراجعة وإعادة المحاولة) */
   mistakes: number;
   percentage: number;
@@ -32,9 +34,45 @@ export function summarizeRecords(records: readonly { status: AnswerStatus }[]): 
     wrong: count('wrong'),
     skipped: count('skipped'),
     revealed: count('revealed'),
+    unanswered: count('unanswered'),
     mistakes: total - correct,
     percentage: total > 0 ? Math.round((correct / total) * 100) : 0,
   };
+}
+
+/**
+ * حالة سؤال واحد داخل الاختبار. تُحفظ لكل سؤال على حدة، لذلك الرجوع إلى سؤال
+ * سابق لا يعيد ضبط إجابته ولا نتيجته، والنتيجة النهائية تُحسب من هذه الحالات
+ * لا من عدد مرات الضغط على الأزرار.
+ */
+export interface QuestionState {
+  /** الإجابة المختارة (معرّف الخيار) أو المكتوبة */
+  answer: string;
+  /** نتيجة التحقق، أو null إذا لم يُتحقق بعد (الإجابة قابلة للتعديل) */
+  result: AnswerStatus | null;
+  hintShown: boolean;
+  answerRevealed: boolean;
+  /** الوقت المستغرق في هذا السؤال بالثواني */
+  timeSpentSec: number;
+}
+
+export function createQuestionState(): QuestionState {
+  return { answer: '', result: null, hintShown: false, answerRevealed: false, timeSpentSec: 0 };
+}
+
+/** هل السؤال محسوم (تحقق أو تخطٍّ)؟ */
+export function isQuestionResolved(state: QuestionState): boolean {
+  return state.result !== null;
+}
+
+/** ملخص النتيجة من حالات الأسئلة (مصدر الحقيقة الوحيد للنقاط). */
+export function summarizeStates(states: readonly QuestionState[]): ScoreSummary {
+  return summarizeRecords(states.map((s) => ({ status: s.result ?? 'unanswered' })));
+}
+
+/** عدد الأسئلة المحلولة إجابة صحيحة. */
+export function countCorrectStates(states: readonly QuestionState[]): number {
+  return states.reduce((sum, s) => sum + (s.result === 'correct' ? 1 : 0), 0);
 }
 
 export interface EvaluationResult {

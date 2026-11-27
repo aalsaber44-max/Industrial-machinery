@@ -21,6 +21,8 @@ export function getStatusLabel(status: AnswerRecord['status']): string {
       return 'تم التخطي';
     case 'revealed':
       return 'تم كشف الإجابة';
+    case 'unanswered':
+      return 'لم يُجب';
     default:
       return 'خطأ';
   }
@@ -47,7 +49,7 @@ export function buildHtmlReport(records: readonly AnswerRecord[], totalTimeSec: 
           ? 'st-ok'
           : rec.status === 'close'
             ? 'st-warn'
-            : rec.status === 'skipped' || rec.status === 'revealed'
+            : rec.status === 'skipped' || rec.status === 'revealed' || rec.status === 'unanswered'
               ? 'st-skip'
               : 'st-err';
       const sym = q.reviewSymbolId ? SYMBOLS.find((x) => x.id === q.reviewSymbolId) : undefined;
@@ -108,6 +110,7 @@ export function buildHtmlReport(records: readonly AnswerRecord[], totalTimeSec: 
       <div class="box"><b>${sum.close}</b><span>قريبة من الصحيح</span></div>
       <div class="box"><b>${sum.skipped}</b><span>تم التخطي</span></div>
       <div class="box"><b>${sum.revealed}</b><span>إجابات مكشوفة</span></div>
+      <div class="box"><b>${sum.unanswered}</b><span>بلا إجابة</span></div>
     </div>
     <table>
       <thead>
@@ -145,7 +148,7 @@ export function buildTxtReport(records: readonly AnswerRecord[], totalTimeSec: n
     '=== تقرير اختبار الرموز الكهربائية ===',
     `التاريخ والوقت: ${nowStr}`,
     `النتيجة: ${sum.correct} من ${sum.total} (${sum.percentage}%) - التقدير: ${grade}`,
-    `صحيح: ${sum.correct} | خطأ: ${sum.wrong} | قريب: ${sum.close} | متخطى: ${sum.skipped} | مكشوف: ${sum.revealed}`,
+    `صحيح: ${sum.correct} | خطأ: ${sum.wrong} | قريب: ${sum.close} | متخطى: ${sum.skipped} | مكشوف: ${sum.revealed} | بلا إجابة: ${sum.unanswered}`,
     `المدة الإجمالية: ${formatDuration(totalTimeSec)}`,
     '----------------------------------------',
   ];

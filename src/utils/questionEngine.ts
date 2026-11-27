@@ -109,10 +109,15 @@ function shortUnit(q: ElectricalQuantity): string {
   return q.unit.split(' (')[0];
 }
 
-/** الطاقة تُستثنى من أسئلة الوحدات العامة لأن لها وحدتين (J و Wh) وتُسأل بأسئلة خاصة. */
-const UNIT_QUANTITIES = QUANTITIES.filter((q) => q.name !== 'الطاقة / الشغل');
+/**
+ * استثناءات أسئلة الوحدات العامة.
+ * جدول الكتاب (8 كميات) لا يحتوي وحدتين متطابقتين، لذلك لا نحتاج إلى استثناءات حالياً،
+ * مع إبقاء الآلية جاهزة إن أُضيفت كمية مستقبلاً تتشارك الوحدة مع غيرها.
+ */
+const UNIT_QUANTITY_EXCLUSIONS = new Set<string>();
+const UNIT_QUANTITIES = QUANTITIES.filter((q) => !UNIT_QUANTITY_EXCLUSIONS.has(q.name));
 /** كميات لها رمز واضح للمعادلات. */
-const SYMBOL_QUANTITIES = QUANTITIES.filter((q) => ['V', 'I', 'R', 'P', 'f', 'C', 'L', 'Q'].includes(q.symbol));
+const SYMBOL_QUANTITIES = QUANTITIES.filter((q) => ['V', 'I', 'R', 'P', 'W', 'F', 'T', 'L'].includes(q.symbol));
 
 function makeChoice(
   base: Omit<ChoiceQuestion, 'kind' | 'options' | 'correctId'>,

@@ -1,5 +1,17 @@
 import React, { useMemo } from 'react';
-import { Volume2, VolumeX, Play, BookOpen, Zap, Layers, Library, Ruler, Gauge, SlidersHorizontal } from 'lucide-react';
+import {
+  Volume2,
+  VolumeX,
+  Play,
+  BookOpen,
+  Zap,
+  Layers,
+  Library,
+  Ruler,
+  Gauge,
+  SlidersHorizontal,
+  BarChart3,
+} from 'lucide-react';
 import type { QuizMode } from '../utils/quizLogic';
 import type { Difficulty, QuestionType, QuizConfig } from '../utils/questionTypes';
 import { ALL_QUESTION_TYPES, DIFFICULTY_INFO, QUESTION_TYPE_INFO, countAvailable } from '../utils/questionEngine';
@@ -16,6 +28,9 @@ interface StartScreenProps {
   onOpenLibrary: () => void;
   onOpenUnits: () => void;
   onOpenDevices: () => void;
+  onOpenFlashcards: () => void;
+  onOpenStudy: () => void;
+  onOpenStats: () => void;
 }
 
 const COUNT_OPTIONS = [10, 20, 30, 50, 90];
@@ -32,6 +47,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onOpenLibrary,
   onOpenUnits,
   onOpenDevices,
+  onOpenFlashcards,
+  onOpenStudy,
+  onOpenStats,
 }) => {
   const quickCount = Math.min(20, totalSymbols);
   const available = useMemo(() => countAvailable(config), [config.types, config.difficulty]);
@@ -274,12 +292,18 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         )}
 
         <div className="mt-6 pt-5 border-t" style={{ borderColor: 'var(--border-color)' }}>
-          <h2 className="text-sm font-bold mb-3">أقسام تعليمية للمراجعة</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <h2 className="text-sm font-bold mb-1">المنصة التعليمية</h2>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+            أقسام للمراجعة والدراسة دون دخول اختبار.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
               { title: 'مكتبة الرموز', icon: <Library className="w-5 h-5" />, onClick: onOpenLibrary },
               { title: 'الكميات والوحدات', icon: <Ruler className="w-5 h-5" />, onClick: onOpenUnits },
               { title: 'أجهزة القياس', icon: <Gauge className="w-5 h-5" />, onClick: onOpenDevices },
+              { title: 'وضع الدراسة', icon: <BookOpen className="w-5 h-5" />, onClick: onOpenStudy },
+              { title: 'بطاقات الحفظ', icon: <Layers className="w-5 h-5" />, onClick: onOpenFlashcards },
+              { title: 'الإحصائيات', icon: <BarChart3 className="w-5 h-5" />, onClick: onOpenStats },
             ].map((item) => (
               <button
                 key={item.title}
@@ -299,7 +323,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
           className="mt-5 pt-4 border-t text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2"
           style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
         >
-          <span>اضغط Enter للتحقق ثم Enter للانتقال للسؤال التالي</span>
+          <span>اضغط Enter للتحقق ثم Enter للانتقال للسؤال التالي · يمكنك الرجوع لأي سؤال</span>
           <span className="tabular-nums">إجمالي قاعدة الرموز: {totalSymbols}</span>
         </div>
       </section>

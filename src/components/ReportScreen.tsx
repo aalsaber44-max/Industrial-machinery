@@ -10,6 +10,8 @@ import {
   AlertTriangle,
   SkipForward,
   Eye,
+  BarChart3,
+  CircleSlash,
 } from 'lucide-react';
 import { SYMBOLS } from '../data/symbols';
 import { LEVEL_LABEL, TYPE_LABEL } from '../utils/questionEngine';
@@ -21,6 +23,7 @@ interface ReportScreenProps {
   totalTimeSec: number;
   onRetryMistakes: () => void;
   onNewQuiz: () => void;
+  onOpenStats: () => void;
 }
 
 export const ReportScreen: React.FC<ReportScreenProps> = ({
@@ -28,8 +31,9 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
   totalTimeSec,
   onRetryMistakes,
   onNewQuiz,
+  onOpenStats,
 }) => {
-  const { total, correct: correctCount, wrong: wrongCount, close: closeCount, skipped: skippedCount, revealed: revealedCount, mistakes: mistakesCount, percentage } = summarizeRecords(records);
+  const { total, correct: correctCount, wrong: wrongCount, close: closeCount, skipped: skippedCount, revealed: revealedCount, unanswered: unansweredCount, mistakes: mistakesCount, percentage } = summarizeRecords(records);
   const grade = getVerbalGrade(percentage);
   const mistakeRecords = records.filter((r) => r.status !== 'correct');
 
@@ -115,13 +119,14 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
           </div>
 
           {/* بطاقات الأرقام */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-6">
             {[
               { label: 'صحيح', value: correctCount, bg: 'var(--ok-bg)', border: 'var(--ok-border)', color: 'var(--ok-text)' },
               { label: 'خطأ', value: wrongCount, bg: 'var(--err-bg)', border: 'var(--err-border)', color: 'var(--err-text)' },
               { label: 'قريب', value: closeCount, bg: 'var(--warn-bg)', border: 'var(--warn-border)', color: 'var(--warn-text)' },
               { label: 'متخطى', value: skippedCount, bg: 'var(--bg-subtle)', border: 'var(--border-color)', color: 'var(--text-main)' },
               { label: 'مكشوف', value: revealedCount, bg: 'var(--bg-subtle)', border: 'var(--border-color)', color: 'var(--text-main)' },
+              { label: 'بلا إجابة', value: unansweredCount, bg: 'var(--bg-subtle)', border: 'var(--border-color)', color: 'var(--text-main)' },
             ].map((b) => (
               <div key={b.label} className="rounded-xl border p-3.5 text-center" style={{ backgroundColor: b.bg, borderColor: b.border, color: b.color }}>
                 <div className="text-2xl font-bold tabular-nums">{b.value}</div>
@@ -130,7 +135,9 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
             ))}
           </div>
           <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
-            النقطة تُمنح للإجابة الصحيحة فقط. الإجابات المتخطاة أو المكشوفة أو القريبة لا تُحتسب خاطئة، لكنها تظهر في مراجعة الأخطاء.
+            النقطة تُمنح للإجابة الصحيحة فقط. الإجابات المتخطاة أو المكشوفة أو القريبة أو غير المحلولة لا تُحتسب صحيحة،
+            لكنها تظهر في مراجعة الأخطاء. النتيجة النهائية محسوبة من الحالة النهائية لكل سؤال، ولا تتأثر بالرجوع أو
+            بتكرار الضغط على «تحقق».
           </p>
 
           {/* أزرار الإجراءات والتصدير */}
@@ -188,6 +195,19 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
                   <span>إعادة الأخطاء فقط ({mistakesCount})</span>
                 </button>
               )}
+              <button
+                type="button"
+                onClick={onOpenStats}
+                className="min-h-[48px] px-3.5 py-2 rounded-xl border font-semibold text-sm flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
+                }}
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>الإحصائيات</span>
+              </button>
               <button
                 type="button"
                 onClick={onNewQuiz}
@@ -313,6 +333,12 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
                       <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: 'var(--warn-text)' }}>
                         <Eye className="w-4 h-4" />
                         <span>تم كشف الإجابة</span>
+                      </span>
+                    )}
+                    {rec.status === 'unanswered' && (
+                      <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: 'var(--text-muted)' }}>
+                        <CircleSlash className="w-4 h-4" />
+                        <span>لم يُجب</span>
                       </span>
                     )}
                     {rec.status === 'wrong' && (
