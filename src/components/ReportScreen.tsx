@@ -11,13 +11,14 @@ import {
   SkipForward,
   Eye,
 } from 'lucide-react';
-import { formatDuration, getVerbalGrade, type AnswerRecord } from '../utils/quizLogic';
+import { SYMBOLS } from '../data/symbols';
+import { LEVEL_LABEL, TYPE_LABEL } from '../utils/questionEngine';
+import { formatDuration, getVerbalGrade, summarizeRecords, type AnswerRecord } from '../utils/quizLogic';
 import { buildHtmlReport, buildTxtReport, downloadTextFile } from '../utils/reportGenerator';
 
 interface ReportScreenProps {
   records: readonly AnswerRecord[];
   totalTimeSec: number;
-  totalBankCount: number;
   onRetryMistakes: () => void;
   onNewQuiz: () => void;
 }
@@ -25,17 +26,17 @@ interface ReportScreenProps {
 export const ReportScreen: React.FC<ReportScreenProps> = ({
   records,
   totalTimeSec,
-  totalBankCount,
   onRetryMistakes,
   onNewQuiz,
 }) => {
-  const total = records.length;
-  const correctCount = records.filter((r) => r.status === 'correct').length;
-  const skippedCount = records.filter((r) => r.status === 'skipped').length;
-  const wrongCount = total - correctCount - skippedCount;
-  const percentage = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+  const { total, correct: correctCount, wrong: wrongCount, close: closeCount, skipped: skippedCount, revealed: revealedCount, mistakes: mistakesCount, percentage } = summarizeRecords(records);
   const grade = getVerbalGrade(percentage);
-  const mistakesCount = total - correctCount;
+  const mistakeRecords = records.filter((r) => r.status !== 'correct');
+
+  // المواضيع الأكثر أخطاءً
+  const topicCounts = new Map<string, number>();
+  for (const r of mistakeRecords) topicCounts.set(r.question.topic, (topicCounts.get(r.question.topic) ?? 0) + 1);
+  const weakTopics = [...topicCounts.entries()].sort((x, y) => y[1] - x[1]).slice(0, 4);
 
   // حساب محيط الرسم الدائري SVG
   const radius = 52;
@@ -70,7 +71,7 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-right space-y-2">
               <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                النتيجة النهائية · قاعدة بيانات {totalBankCount} رمزاً
+                النتيجة النهائية
               </p>
               <h1 className="text-2xl sm:text-3xl font-bold">
                 التقدير: {grade}
@@ -114,29 +115,23 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
           </div>
 
           {/* بطاقات الأرقام */}
-          <div className="grid grid-cols-3 gap-3 mt-6">
-            <div
-              className="rounded-xl border p-3.5 text-center"
-              style={{ backgroundColor: 'var(--ok-bg)', borderColor: 'var(--ok-border)', color: 'var(--ok-text)' }}
-            >
-              <div className="text-2xl font-bold tabular-nums">{correctCount}</div>
-              <div className="text-xs sm:text-sm font-semibold">صحيح</div>
-            </div>
-            <div
-              className="rounded-xl border p-3.5 text-center"
-              style={{ backgroundColor: 'var(--err-bg)', borderColor: 'var(--err-border)', color: 'var(--err-text)' }}
-            >
-              <div className="text-2xl font-bold tabular-nums">{wrongCount}</div>
-              <div className="text-xs sm:text-sm font-semibold">خطأ</div>
-            </div>
-            <div
-              className="rounded-xl border p-3.5 text-center"
-              style={{ backgroundColor: 'var(--bg-subtle)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-            >
-              <div className="text-2xl font-bold tabular-nums">{skippedCount}</div>
-              <div className="text-xs sm:text-sm font-semibold">متخطى</div>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6">
+            {[
+              { label: 'صحيح', value: correctCount, bg: 'var(--ok-bg)', border: 'var(--ok-border)', color: 'var(--ok-text)' },
+              { label: 'خطأ', value: wrongCount, bg: 'var(--err-bg)', border: 'var(--err-border)', color: 'var(--err-text)' },
+              { label: 'قريب', value: closeCount, bg: 'var(--warn-bg)', border: 'var(--warn-border)', color: 'var(--warn-text)' },
+              { label: 'متخطى', value: skippedCount, bg: 'var(--bg-subtle)', border: 'var(--border-color)', color: 'var(--text-main)' },
+              { label: 'مكشوف', value: revealedCount, bg: 'var(--bg-subtle)', border: 'var(--border-color)', color: 'var(--text-main)' },
+            ].map((b) => (
+              <div key={b.label} className="rounded-xl border p-3.5 text-center" style={{ backgroundColor: b.bg, borderColor: b.border, color: b.color }}>
+                <div className="text-2xl font-bold tabular-nums">{b.value}</div>
+                <div className="text-xs sm:text-sm font-semibold">{b.label}</div>
+              </div>
+            ))}
           </div>
+          <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+            النقطة تُمنح للإجابة الصحيحة فقط. الإجابات المتخطاة أو المكشوفة أو القريبة لا تُحتسب خاطئة، لكنها تظهر في مراجعة الأخطاء.
+          </p>
 
           {/* أزرار الإجراءات والتصدير */}
           <div className="no-print flex flex-wrap items-center justify-between gap-3 mt-6 pt-5 border-t" style={{ borderColor: 'var(--border-color)' }}>
@@ -210,6 +205,47 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
           </div>
         </section>
 
+        {/* مراجعة الأخطاء */}
+        {mistakeRecords.length > 0 && (
+          <section
+            className="rounded-2xl border p-4 sm:p-6 shadow-sm space-y-4"
+            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
+          >
+            <div>
+              <h2 className="text-lg font-bold">مراجعة الأخطاء ({mistakeRecords.length})</h2>
+              {weakTopics.length > 0 && (
+                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                  أكثر المواضيع التي تحتاج مراجعة: {weakTopics.map(([t, n]) => `${t} (${n})`).join('، ')}
+                </p>
+              )}
+            </div>
+            <ul className="space-y-3">
+              {mistakeRecords.map((rec, idx) => {
+                const q = rec.question;
+                const sym = q.reviewSymbolId ? SYMBOLS.find((x) => x.id === q.reviewSymbolId) : undefined;
+                return (
+                  <li key={`${q.id}-${idx}`} className="rounded-xl border p-3 flex flex-col sm:flex-row gap-3" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-subtle)' }}>
+                    {sym && (
+                      <div className="engineering-grid w-28 h-16 rounded-lg border flex items-center justify-center p-1 shrink-0" style={{ borderColor: 'var(--border-color)' }}>
+                        <svg viewBox="0 0 200 120" className="symbol-svg" aria-label={sym.name} dangerouslySetInnerHTML={{ __html: sym.svg }} />
+                      </div>
+                    )}
+                    <div className="space-y-1 text-sm min-w-0">
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {TYPE_LABEL[q.type]} · {LEVEL_LABEL[q.level]}
+                      </p>
+                      <p dir="auto" className="font-bold">{q.stem ? `${q.prompt} ${q.stem}` : q.prompt}</p>
+                      <p dir="auto"><strong>إجابتك: </strong>{rec.userAnswer.trim() || (rec.status === 'skipped' ? 'تم التخطي' : '—')}</p>
+                      <p dir="auto" style={{ color: 'var(--ok-text)' }}><strong>الإجابة الصحيحة: </strong>{q.correctText}</p>
+                      <p dir="auto" style={{ color: 'var(--text-muted)' }}><strong>الشرح: </strong>{q.explanation}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
         {/* جدول المراجعة التفصيلي */}
         <section
           className="rounded-2xl border p-4 sm:p-6 shadow-sm overflow-x-auto"
@@ -227,30 +263,33 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
               >
                 <th className="py-3 px-2">#</th>
                 <th className="py-3 px-2">الرمز</th>
+                <th className="py-3 px-2">السؤال</th>
                 <th className="py-3 px-2">إجابتك</th>
                 <th className="py-3 px-2">الإجابة الصحيحة</th>
                 <th className="py-3 px-2">الحالة</th>
               </tr>
             </thead>
             <tbody>
-              {records.map((rec, idx) => (
-                <tr key={`${rec.symbol.id}-${idx}`} className="border-b" style={{ borderColor: 'var(--border-color)' }}>
+              {records.map((rec, idx) => {
+                const sym = rec.question.reviewSymbolId ? SYMBOLS.find((x) => x.id === rec.question.reviewSymbolId) : undefined;
+                return (
+                <tr key={`${rec.question.id}-${idx}`} className="border-b" style={{ borderColor: 'var(--border-color)' }}>
                   <td className="py-3 px-2 tabular-nums font-medium">{idx + 1}</td>
                   <td className="py-2 px-2">
-                    <div
-                      className="engineering-grid w-24 h-14 rounded-lg border flex items-center justify-center p-1"
-                      style={{ borderColor: 'var(--border-color)' }}
-                    >
-                      <svg
-                        viewBox="0 0 200 120"
-                        className="symbol-svg"
-                        aria-label={rec.symbol.name}
-                        dangerouslySetInnerHTML={{ __html: rec.symbol.svg }}
-                      />
-                    </div>
+                    {sym ? (
+                      <div
+                        className="engineering-grid w-24 h-14 rounded-lg border flex items-center justify-center p-1"
+                        style={{ borderColor: 'var(--border-color)' }}
+                      >
+                        <svg viewBox="0 0 200 120" className="symbol-svg" aria-label={sym.name} dangerouslySetInnerHTML={{ __html: sym.svg }} />
+                      </div>
+                    ) : (
+                      '—'
+                    )}
                   </td>
-                  <td className="py-3 px-2">{rec.userAnswer.trim() || '—'}</td>
-                  <td className="py-3 px-2 font-bold">{rec.symbol.name}</td>
+                  <td dir="auto" className="py-3 px-2 min-w-[180px]">{rec.question.stem ? `${rec.question.prompt} ${rec.question.stem}` : rec.question.prompt}</td>
+                  <td dir="auto" className="py-3 px-2">{rec.userAnswer.trim() || '—'}</td>
+                  <td dir="auto" className="py-3 px-2 font-bold">{rec.question.correctText}</td>
                   <td className="py-3 px-2 whitespace-nowrap">
                     {rec.status === 'correct' && (
                       <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: 'var(--ok-text)' }}>
@@ -284,7 +323,8 @@ export const ReportScreen: React.FC<ReportScreenProps> = ({
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </section>
